@@ -1,0 +1,1084 @@
+<!DOCTYPE html>
+<html lang="cs" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ritual — Habit Tracker</title>
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#8b6f47" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#c4956a" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Ritual">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192x192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512x512.png">
+
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f0e8;
+    --bg2: #ede7d9;
+    --bg3: #e5dece;
+    --surface: rgba(255,255,255,0.6);
+    --surface2: rgba(255,255,255,0.85);
+    --border: rgba(160,140,110,0.25);
+    --text: #2c2416;
+    --text2: #6b5c42;
+    --text3: #9c8b72;
+    --accent: #8b6f47;
+    --accent2: #b8956a;
+    --accent-soft: rgba(139,111,71,0.12);
+    --checked: #6b8c5a;
+    --checked-soft: rgba(107,140,90,0.15);
+    --danger: #c0634a;
+    --shadow: rgba(60,40,15,0.10);
+    --grain: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  }
+  [data-theme="dark"] {
+    --bg: #1a1510;
+    --bg2: #211c14;
+    --bg3: #2a2418;
+    --surface: rgba(40,33,22,0.7);
+    --surface2: rgba(48,40,28,0.95);
+    --border: rgba(160,140,110,0.18);
+    --text: #f0e8d6;
+    --text2: #c4b08a;
+    --text3: #8a7660;
+    --accent: #c4956a;
+    --accent2: #e0b88a;
+    --accent-soft: rgba(196,149,106,0.12);
+    --checked: #8aab78;
+    --checked-soft: rgba(138,171,120,0.15);
+    --danger: #d97a5e;
+    --shadow: rgba(0,0,0,0.35);
+    --grain: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.06'/%3E%3C/svg%3E");
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    transition: background 0.4s ease, color 0.4s ease;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: var(--grain);
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.6;
+  }
+
+  /* DECORATIVE BG BLOBS */
+  .bg-blob {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.18;
+    pointer-events: none;
+    transition: background 0.4s;
+  }
+  .bg-blob-1 {
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, var(--accent2), transparent);
+    top: -100px; right: -100px;
+  }
+  .bg-blob-2 {
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, var(--checked), transparent);
+    bottom: -80px; left: -80px;
+  }
+
+  /* HEADER */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 2rem 2.5rem 1.5rem;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    background: linear-gradient(to bottom, var(--bg) 60%, transparent);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .logo {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.8rem;
+    font-weight: 300;
+    letter-spacing: 0.15em;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .logo span { color: var(--accent); font-style: italic; }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .week-nav {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text2);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .week-nav button {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text2);
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+    backdrop-filter: blur(8px);
+  }
+  .week-nav button:hover { background: var(--accent-soft); color: var(--accent); }
+
+  .theme-toggle {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 50px;
+    padding: 0.35rem 0.8rem;
+    cursor: pointer;
+    font-size: 1rem;
+    display: flex; align-items: center; gap: 0.4rem;
+    color: var(--text2);
+    transition: all 0.2s;
+    backdrop-filter: blur(8px);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+  }
+  .theme-toggle:hover { background: var(--accent-soft); color: var(--accent); }
+  .theme-icon { font-size: 1rem; }
+
+  /* MAIN */
+  main {
+    padding: 2rem 2rem 4rem;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  /* SECTION HEADER */
+  .section-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+  }
+  .section-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 2rem;
+    font-weight: 300;
+    color: var(--text);
+    letter-spacing: 0.04em;
+  }
+  .section-title em { color: var(--accent); font-style: italic; }
+
+  .add-habit-btn {
+    display: flex; align-items: center; gap: 0.4rem;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 50px;
+    padding: 0.5rem 1.2rem;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: all 0.25s;
+    box-shadow: 0 4px 14px var(--shadow);
+  }
+  .add-habit-btn:hover { background: var(--accent2); transform: translateY(-1px); box-shadow: 0 6px 20px var(--shadow); }
+
+  /* GRID */
+  .tracker-grid {
+    background: var(--surface);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 8px 40px var(--shadow);
+  }
+
+  .grid-header {
+    display: grid;
+    grid-template-columns: minmax(160px, 260px) repeat(7, 1fr);
+    border-bottom: 1px solid var(--border);
+    background: var(--bg2);
+  }
+
+  .grid-header-habit {
+    padding: 1rem 1.2rem;
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text3);
+  }
+
+  .day-header {
+    padding: 1rem 0.5rem;
+    text-align: center;
+    border-left: 1px solid var(--border);
+  }
+  .day-name {
+    font-size: 0.65rem;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text3);
+    display: block;
+  }
+  .day-num {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.4rem;
+    font-weight: 300;
+    color: var(--text);
+    display: block;
+    line-height: 1.2;
+  }
+  .day-header.today .day-num {
+    color: var(--accent);
+    position: relative;
+  }
+  .day-header.today .day-name { color: var(--accent); }
+  .day-header.today::after {
+    content: '';
+    display: block;
+    width: 4px; height: 4px;
+    background: var(--accent);
+    border-radius: 50%;
+    margin: 3px auto 0;
+  }
+
+  /* HABIT ROWS */
+  .habit-row {
+    display: grid;
+    grid-template-columns: minmax(160px, 260px) repeat(7, 1fr);
+    border-top: 1px solid var(--border);
+    transition: background 0.2s;
+    animation: rowIn 0.35s ease both;
+  }
+  @keyframes rowIn {
+    from { opacity: 0; transform: translateX(-12px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  .habit-row:hover { background: var(--accent-soft); }
+
+  .habit-label {
+    padding: 0.9rem 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    position: relative;
+  }
+  .habit-emoji { font-size: 1.2rem; line-height: 1; }
+  .habit-name {
+    font-size: 0.88rem;
+    font-weight: 400;
+    color: var(--text);
+    line-height: 1.3;
+    flex: 1;
+  }
+  .habit-actions {
+    display: flex;
+    gap: 0.3rem;
+    position: absolute;
+    right: 0.5rem;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .habit-row:hover .habit-actions { opacity: 1; }
+  @media (hover: none) { .habit-actions { opacity: 1; } }
+
+  .action-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 0.85rem;
+    padding: 0.2rem 0.3rem;
+    border-radius: 6px;
+    color: var(--text3);
+    transition: all 0.15s;
+  }
+  .action-btn:hover { background: var(--bg3); color: var(--text); }
+  .action-btn.delete:hover { color: var(--danger); }
+
+  .check-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-left: 1px solid var(--border);
+    padding: 0.5rem;
+  }
+
+  .check-btn {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border);
+    background: transparent;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem;
+    transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    color: transparent;
+    position: relative;
+  }
+  .check-btn:hover {
+    border-color: var(--checked);
+    background: var(--checked-soft);
+    transform: scale(1.1);
+  }
+  .check-btn.checked {
+    background: var(--checked-soft);
+    border-color: var(--checked);
+    color: var(--checked);
+    transform: scale(1.05);
+  }
+  .check-btn.checked::after {
+    content: '✓';
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--checked);
+  }
+
+  /* EMPTY STATE */
+  .empty-state {
+    padding: 4rem 2rem;
+    text-align: center;
+    display: none;
+  }
+  .empty-state.visible { display: block; }
+  .empty-state p {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.3rem;
+    font-style: italic;
+    color: var(--text3);
+  }
+  .empty-state small {
+    display: block;
+    margin-top: 0.5rem;
+    font-size: 0.82rem;
+    color: var(--text3);
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  /* STATS */
+  .stats-bar {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1.5rem;
+    flex-wrap: wrap;
+  }
+  .stat-card {
+    flex: 1;
+    min-width: 120px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1rem 1.2rem;
+    backdrop-filter: blur(12px);
+    text-align: center;
+    transition: transform 0.2s;
+  }
+  .stat-card:hover { transform: translateY(-2px); }
+  .stat-num {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 2.2rem;
+    font-weight: 300;
+    color: var(--accent);
+    line-height: 1;
+    display: block;
+  }
+  .stat-label {
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-top: 0.2rem;
+    display: block;
+  }
+
+  /* MODAL */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    backdrop-filter: blur(8px);
+    z-index: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+
+  .modal {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    padding: 2rem;
+    width: 100%;
+    max-width: 440px;
+    box-shadow: 0 24px 60px var(--shadow);
+    transform: translateY(20px) scale(0.97);
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .modal-overlay.open .modal { transform: translateY(0) scale(1); }
+
+  .modal h2 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.7rem;
+    font-weight: 300;
+    margin-bottom: 1.5rem;
+    color: var(--text);
+  }
+  .modal h2 em { color: var(--accent); font-style: italic; }
+
+  .field {
+    margin-bottom: 1.2rem;
+  }
+  .field label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 0.5rem;
+  }
+  .field input {
+    width: 100%;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .field input:focus { border-color: var(--accent); }
+  .field input::placeholder { color: var(--text3); }
+
+  .emoji-picker {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 0.4rem;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0.75rem;
+    max-height: 180px;
+    overflow-y: auto;
+  }
+  .emoji-option {
+    font-size: 1.35rem;
+    text-align: center;
+    cursor: pointer;
+    padding: 0.35rem;
+    border-radius: 8px;
+    transition: all 0.15s;
+    border: 2px solid transparent;
+    line-height: 1.4;
+  }
+  .emoji-option:hover { background: var(--accent-soft); transform: scale(1.2); }
+  .emoji-option.selected { border-color: var(--accent); background: var(--accent-soft); transform: scale(1.1); }
+
+  .modal-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1.8rem;
+  }
+  .btn-cancel {
+    flex: 1;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 50px;
+    padding: 0.75rem;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text2);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-cancel:hover { background: var(--bg2); }
+  .btn-save {
+    flex: 2;
+    background: var(--accent);
+    border: none;
+    border-radius: 50px;
+    padding: 0.75rem;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 14px var(--shadow);
+  }
+  .btn-save:hover { background: var(--accent2); }
+
+  /* RESPONSIVE */
+  @media (max-width: 720px) {
+    header { padding: 1.2rem 1.2rem 1rem; }
+    .logo { font-size: 1.4rem; }
+    .week-label { display: none; }
+    main { padding: 1.2rem 0.8rem 4rem; }
+    .section-header { flex-direction: column; gap: 0.8rem; }
+    .tracker-grid { border-radius: 14px; overflow-x: auto; }
+    .grid-header, .habit-row {
+      grid-template-columns: 130px repeat(7, 44px);
+      min-width: 440px;
+    }
+    .habit-name { font-size: 0.78rem; }
+    .check-btn { width: 28px; height: 28px; font-size: 0.85rem; }
+    .stats-bar { gap: 0.6rem; }
+    .stat-card { padding: 0.75rem; }
+  }
+
+  @media (max-width: 480px) {
+    .header-right { gap: 0.5rem; }
+    .theme-toggle span:last-child { display: none; }
+  }
+
+  /* INSTALL BANNER */
+  .install-banner {
+    position: fixed;
+    bottom: 1.5rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(120px);
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 0.9rem 1.1rem;
+    box-shadow: 0 8px 32px var(--shadow);
+    backdrop-filter: blur(20px);
+    width: calc(100% - 3rem);
+    max-width: 420px;
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .install-banner.visible { transform: translateX(-50%) translateY(0); }
+  .install-icon { font-size: 1.5rem; flex-shrink: 0; }
+  .install-text { flex: 1; }
+  .install-text strong { display: block; font-size: 0.88rem; font-weight: 500; color: var(--text); }
+  .install-text span { font-size: 0.75rem; color: var(--text3); }
+  .install-btn {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 50px;
+    padding: 0.45rem 1rem;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s;
+    flex-shrink: 0;
+  }
+  .install-btn:hover { background: var(--accent2); }
+  .install-dismiss {
+    background: none;
+    border: none;
+    color: var(--text3);
+    cursor: pointer;
+    font-size: 0.9rem;
+    padding: 0.2rem;
+    flex-shrink: 0;
+    line-height: 1;
+    transition: color 0.15s;
+  }
+  .install-dismiss:hover { color: var(--text); }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+
+  /* PROGRESS RING */
+  .progress-wrap {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding: 1.2rem 1.5rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    backdrop-filter: blur(12px);
+  }
+  .progress-ring { flex-shrink: 0; }
+  .progress-text h3 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.25rem;
+    font-weight: 300;
+    color: var(--text);
+  }
+  .progress-text p {
+    font-size: 0.78rem;
+    color: var(--text3);
+    margin-top: 0.2rem;
+    letter-spacing: 0.03em;
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-blob bg-blob-1"></div>
+<div class="bg-blob bg-blob-2"></div>
+
+<!-- PWA Install Banner -->
+<div class="install-banner" id="installBanner">
+  <span class="install-icon">🌿</span>
+  <div class="install-text">
+    <strong>Nainstalovat Ritual</strong>
+    <span>Přidat na plochu a používat offline</span>
+  </div>
+  <button class="install-btn" id="installBtn">Instalovat</button>
+  <button class="install-dismiss" id="installDismiss">✕</button>
+</div>
+
+<header>
+  <div class="logo">ritual <span>·</span> habits</div>
+  <div class="header-right">
+    <div class="week-nav">
+      <button id="prevWeek" title="Předchozí týden">‹</button>
+      <span class="week-label" id="weekLabel"></span>
+      <button id="nextWeek" title="Příští týden">›</button>
+    </div>
+    <button class="theme-toggle" id="themeToggle">
+      <span class="theme-icon">☀</span>
+      <span>Světlý</span>
+    </button>
+  </div>
+</header>
+
+<main>
+  <!-- PROGRESS OVERVIEW -->
+  <div class="progress-wrap">
+    <svg class="progress-ring" width="56" height="56" viewBox="0 0 56 56">
+      <circle cx="28" cy="28" r="22" fill="none" stroke="var(--border)" stroke-width="4"/>
+      <circle id="progressCircle" cx="28" cy="28" r="22" fill="none" stroke="var(--accent)" stroke-width="4"
+        stroke-linecap="round" stroke-dasharray="138.23" stroke-dashoffset="138.23"
+        transform="rotate(-90 28 28)" style="transition: stroke-dashoffset 0.6s ease"/>
+    </svg>
+    <div class="progress-text">
+      <h3 id="progressTitle">Dnešní progres</h3>
+      <p id="progressSubtitle">Začni svůj rituál dne…</p>
+    </div>
+  </div>
+
+  <div class="section-header">
+    <h2 class="section-title">Týdenní <em>přehled</em></h2>
+    <button class="add-habit-btn" id="openModalBtn">＋ &nbsp;Přidat návyk</button>
+  </div>
+
+  <div class="tracker-grid" id="trackerGrid">
+    <div class="grid-header" id="gridHeader">
+      <div class="grid-header-habit">Návyk</div>
+      <!-- day headers injected by JS -->
+    </div>
+    <div id="habitsContainer"></div>
+    <div class="empty-state" id="emptyState">
+      <p>Zatím žádné návyky…</p>
+      <small>Klikni na „Přidat návyk" a začni svůj rituál.</small>
+    </div>
+  </div>
+
+  <div class="stats-bar" id="statsBar"></div>
+</main>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <h2 id="modalTitle">Nový <em>návyk</em></h2>
+    <div class="field">
+      <label>Název návyku</label>
+      <input type="text" id="habitNameInput" placeholder="např. Meditace, Čtení…" maxlength="40">
+    </div>
+    <div class="field">
+      <label>Vyber emoji</label>
+      <div class="emoji-picker" id="emojiPicker"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="cancelModal">Zrušit</button>
+      <button class="btn-save" id="saveHabit">Uložit návyk</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── DATA ──────────────────────────────────────────────────────────────
+  const EMOJIS = [
+    '🧘','💧','📚','🏃','🥗','😴','🧠','✍️','🌿','☀️','🎨','🎵',
+    '💪','🚴','🧹','🌸','🙏','🍵','🌙','🏋️','🦷','💊','🌱','🎯',
+    '🧘‍♀️','🛁','🍎','🐾','📝','❤️','🕯️','🫁','🥤','🎭','🌊','🍃'
+  ];
+
+  const DAYS_CZ = ['Ne','Po','Út','St','Čt','Pá','So'];
+  const DAY_NAMES_CZ = ['Neděle','Pondělí','Úterý','Středa','Čtvrtek','Pátek','Sobota'];
+
+  let weekOffset = 0; // 0 = current week
+
+  function getWeekDates(offset = 0) {
+    const today = new Date();
+    const dow = today.getDay(); // 0=Sun
+    // Monday-start week: shift so week starts on Monday
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - ((dow + 6) % 7) + offset * 7);
+    return Array.from({length: 7}, (_, i) => {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      return d;
+    });
+  }
+
+  function dateKey(date) {
+    return date.toISOString().slice(0, 10);
+  }
+
+  function isToday(date) {
+    return dateKey(date) === dateKey(new Date());
+  }
+
+  // Load / save
+  function loadData() {
+    try { return JSON.parse(localStorage.getItem('ritual_habits') || '{}'); } catch { return {}; }
+  }
+  function saveData(data) {
+    localStorage.setItem('ritual_habits', JSON.stringify(data));
+  }
+
+  let data = loadData();
+  if (!data.habits) data.habits = [];
+  if (!data.checks) data.checks = {};
+
+  // Pre-fill example habits if empty
+  if (data.habits.length === 0) {
+    data.habits = [
+      { id: uid(), name: 'Meditace', emoji: '🧘' },
+      { id: uid(), name: 'Pít 2l vody', emoji: '💧' },
+      { id: uid(), name: 'Čtení 20 min', emoji: '📚' },
+      { id: uid(), name: 'Pohyb / Sport', emoji: '🏃' },
+    ];
+    saveData(data);
+  }
+
+  function uid() { return Math.random().toString(36).slice(2, 10); }
+
+  // ── THEME ─────────────────────────────────────────────────────────────
+  const savedTheme = localStorage.getItem('ritual_theme') || 'light';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+  updateThemeBtn(savedTheme);
+
+  document.getElementById('themeToggle').addEventListener('click', () => {
+    const cur = document.documentElement.getAttribute('data-theme');
+    const next = cur === 'light' ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('ritual_theme', next);
+    updateThemeBtn(next);
+  });
+
+  function updateThemeBtn(theme) {
+    const btn = document.getElementById('themeToggle');
+    btn.querySelector('.theme-icon').textContent = theme === 'light' ? '☀' : '☽';
+    btn.querySelectorAll('span')[1].textContent = theme === 'light' ? 'Světlý' : 'Tmavý';
+  }
+
+  // ── WEEK NAV ──────────────────────────────────────────────────────────
+  document.getElementById('prevWeek').addEventListener('click', () => { weekOffset--; render(); });
+  document.getElementById('nextWeek').addEventListener('click', () => { weekOffset++; render(); });
+
+  // ── RENDER ────────────────────────────────────────────────────────────
+  function render() {
+    const dates = getWeekDates(weekOffset);
+
+    // Week label
+    const fmt = d => d.toLocaleDateString('cs-CZ', {day:'numeric', month:'short'});
+    document.getElementById('weekLabel').textContent = `${fmt(dates[0])} – ${fmt(dates[6])}`;
+
+    // Day headers
+    const gridHeader = document.getElementById('gridHeader');
+    // Remove old day headers
+    while (gridHeader.children.length > 1) gridHeader.removeChild(gridHeader.lastChild);
+    dates.forEach(date => {
+      const div = document.createElement('div');
+      div.className = 'day-header' + (isToday(date) ? ' today' : '');
+      div.innerHTML = `<span class="day-name">${DAYS_CZ[date.getDay()]}</span><span class="day-num">${date.getDate()}</span>`;
+      gridHeader.appendChild(div);
+    });
+
+    // Habits
+    const container = document.getElementById('habitsContainer');
+    container.innerHTML = '';
+    document.getElementById('emptyState').classList.toggle('visible', data.habits.length === 0);
+
+    data.habits.forEach((habit, idx) => {
+      const row = document.createElement('div');
+      row.className = 'habit-row';
+      row.style.animationDelay = `${idx * 0.05}s`;
+
+      const label = document.createElement('div');
+      label.className = 'habit-label';
+      label.innerHTML = `
+        <span class="habit-emoji">${habit.emoji}</span>
+        <span class="habit-name">${escHtml(habit.name)}</span>
+        <div class="habit-actions">
+          <button class="action-btn" title="Upravit" onclick="event.stopPropagation(); openEditModal('${habit.id}')">✎</button>
+          <button class="action-btn delete" title="Smazat" onclick="event.stopPropagation(); deleteHabit('${habit.id}')">✕</button>
+        </div>
+      `;
+      row.appendChild(label);
+
+      dates.forEach(date => {
+        const key = `${habit.id}_${dateKey(date)}`;
+        const cell = document.createElement('div');
+        cell.className = 'check-cell';
+        const btn = document.createElement('button');
+        btn.className = 'check-btn' + (data.checks[key] ? ' checked' : '');
+        btn.title = DAY_NAMES_CZ[date.getDay()];
+        btn.addEventListener('click', () => {
+          data.checks[key] = !data.checks[key];
+          saveData(data);
+          btn.classList.toggle('checked', data.checks[key]);
+          updateProgress(dates);
+          updateStats(dates);
+        });
+        cell.appendChild(btn);
+        row.appendChild(cell);
+      });
+
+      container.appendChild(row);
+    });
+
+    // (edit/delete handled via inline onclick)
+
+    updateProgress(dates);
+    updateStats(dates);
+  }
+
+  function updateProgress(dates) {
+    const today = new Date();
+    const todayKey = dateKey(today);
+    const total = data.habits.length;
+    const done = data.habits.filter(h => data.checks[`${h.id}_${todayKey}`]).length;
+    const pct = total ? done / total : 0;
+    const circ = 2 * Math.PI * 22;
+    document.getElementById('progressCircle').style.strokeDashoffset = circ * (1 - pct);
+
+    if (total === 0) {
+      document.getElementById('progressTitle').textContent = 'Žádné návyky';
+      document.getElementById('progressSubtitle').textContent = 'Přidej první návyk a začni.';
+    } else if (pct === 1) {
+      document.getElementById('progressTitle').textContent = '🎉 Skvělý den!';
+      document.getElementById('progressSubtitle').textContent = 'Všechny návyky splněny. Tak dál!';
+    } else {
+      document.getElementById('progressTitle').textContent = `${done} z ${total} splněno dnes`;
+      document.getElementById('progressSubtitle').textContent = pct === 0 ? 'Začni svůj rituál dne…' : `Ještě ${total - done} zbývá. Nevzdávej to!`;
+    }
+  }
+
+  function updateStats(dates) {
+    const bar = document.getElementById('statsBar');
+    bar.innerHTML = '';
+
+    // Total checks this week
+    let weekTotal = 0, weekDone = 0;
+    dates.forEach(date => {
+      data.habits.forEach(h => {
+        weekTotal++;
+        if (data.checks[`${h.id}_${dateKey(date)}`]) weekDone++;
+      });
+    });
+    const weekPct = weekTotal ? Math.round(weekDone / weekTotal * 100) : 0;
+
+    // Streak (consecutive days with ≥1 check)
+    let streak = 0;
+    for (let i = 0; i < 365; i++) {
+      const d = new Date(); d.setDate(d.getDate() - i);
+      const dk = dateKey(d);
+      const anyDone = data.habits.some(h => data.checks[`${h.id}_${dk}`]);
+      if (anyDone) streak++; else break;
+    }
+
+    const cards = [
+      { num: weekDone, label: 'Splněno týdně' },
+      { num: `${weekPct}%`, label: 'Týdenní skóre' },
+      { num: streak, label: `Den${streak === 1 ? '' : 'ní'} série 🔥` },
+      { num: data.habits.length, label: 'Aktivní návyky' },
+    ];
+    cards.forEach(c => {
+      const card = document.createElement('div');
+      card.className = 'stat-card';
+      card.innerHTML = `<span class="stat-num">${c.num}</span><span class="stat-label">${c.label}</span>`;
+      bar.appendChild(card);
+    });
+  }
+
+  function escHtml(str) {
+    return str.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  // ── MODAL ─────────────────────────────────────────────────────────────
+  let editingId = null;
+  let selectedEmoji = '🌿';
+
+  function buildEmojiPicker() {
+    const picker = document.getElementById('emojiPicker');
+    picker.innerHTML = '';
+    EMOJIS.forEach(em => {
+      const span = document.createElement('span');
+      span.className = 'emoji-option' + (em === selectedEmoji ? ' selected' : '');
+      span.textContent = em;
+      span.addEventListener('click', () => {
+        selectedEmoji = em;
+        picker.querySelectorAll('.emoji-option').forEach(s => s.classList.remove('selected'));
+        span.classList.add('selected');
+      });
+      picker.appendChild(span);
+    });
+  }
+
+  function openAddModal() {
+    editingId = null;
+    selectedEmoji = '🌿';
+    document.getElementById('habitNameInput').value = '';
+    document.getElementById('modalTitle').innerHTML = 'Nový <em>návyk</em>';
+    document.getElementById('saveHabit').textContent = 'Uložit návyk';
+    buildEmojiPicker();
+    document.getElementById('modalOverlay').classList.add('open');
+    setTimeout(() => document.getElementById('habitNameInput').focus(), 100);
+  }
+
+  function openEditModal(id) {
+    const habit = data.habits.find(h => h.id === id);
+    if (!habit) return;
+    editingId = id;
+    selectedEmoji = habit.emoji;
+    document.getElementById('habitNameInput').value = habit.name;
+    document.getElementById('modalTitle').innerHTML = 'Upravit <em>návyk</em>';
+    document.getElementById('saveHabit').textContent = 'Uložit změny';
+    buildEmojiPicker();
+    document.getElementById('modalOverlay').classList.add('open');
+    setTimeout(() => document.getElementById('habitNameInput').focus(), 100);
+  }
+
+  function closeModal() {
+    document.getElementById('modalOverlay').classList.remove('open');
+  }
+
+  function deleteHabit(id) {
+    data.habits = data.habits.filter(h => h.id !== id);
+    Object.keys(data.checks).forEach(k => { if (k.startsWith(id + '_')) delete data.checks[k]; });
+    saveData(data);
+    render();
+  }
+
+  document.getElementById('openModalBtn').addEventListener('click', openAddModal);
+  document.getElementById('cancelModal').addEventListener('click', closeModal);
+  document.getElementById('modalOverlay').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
+
+  document.getElementById('saveHabit').addEventListener('click', () => {
+    const name = document.getElementById('habitNameInput').value.trim();
+    if (!name) { document.getElementById('habitNameInput').focus(); return; }
+
+    if (editingId) {
+      const habit = data.habits.find(h => h.id === editingId);
+      if (habit) { habit.name = name; habit.emoji = selectedEmoji; }
+    } else {
+      data.habits.push({ id: uid(), name, emoji: selectedEmoji });
+    }
+    saveData(data);
+    closeModal();
+    render();
+  });
+
+  document.getElementById('habitNameInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('saveHabit').click();
+  });
+
+  // ── PWA: Service Worker ───────────────────────────────────────────────
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js')
+        .then(reg => console.log('SW registered:', reg.scope))
+        .catch(err => console.log('SW error:', err));
+    });
+  }
+
+  // ── PWA: Install prompt ───────────────────────────────────────────────
+  let deferredPrompt = null;
+  const installBanner = document.getElementById('installBanner');
+  const installBtn = document.getElementById('installBtn');
+  const installDismiss = document.getElementById('installDismiss');
+
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    deferredPrompt = e;
+    // Show banner only if not dismissed before
+    if (!localStorage.getItem('ritual_install_dismissed')) {
+      installBanner.classList.add('visible');
+    }
+  });
+
+  installBtn && installBtn.addEventListener('click', async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    deferredPrompt = null;
+    installBanner.classList.remove('visible');
+    if (outcome === 'accepted') localStorage.setItem('ritual_install_dismissed', '1');
+  });
+
+  installDismiss && installDismiss.addEventListener('click', () => {
+    installBanner.classList.remove('visible');
+    localStorage.setItem('ritual_install_dismissed', '1');
+  });
+
+  window.addEventListener('appinstalled', () => {
+    installBanner.classList.remove('visible');
+    deferredPrompt = null;
+  });
+
+  // ── INIT ──────────────────────────────────────────────────────────────
+  render();
+</script>
+</body>
+</html>
